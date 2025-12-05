@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BREAKNFIX: CREAR, ROMPER Y ARREGLAR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados: Estética de Terminal y Ciberseguridad */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Roboto Mono', monospace; /* Fuente de terminal para el feel tech */
+            background-color: #0f172a; /* Slate-900: Fondo muy oscuro */
+            color: #e2e8f0; /* Azul claro (slate-200) para el texto principal */
+        }
+        /* Color de Éxito/Operacional: CYAN (El nuevo FIX) */
+        .fix-color {
+            color: #22d3ee; /* Cyan-400 */
+        }
+        .fix-color-bg {
+            background-color: #22d3ee; /* Cyan-400 */
+        }
+        /* Color de Alerta/Falla: AMARILLO (El nuevo BREAK) */
+        .break-color {
+            color: #facc15; /* Yellow-400 */
+        }
+        .break-color-bg {
+            background-color: #facc15; /* Yellow-400 */
+        }
+        /* Sección Principal (Hero) - Degradado oscuro y futurista */
+        .hero-section {
+            background-image: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); /* Slate-900 a Blue-900 */
+            box-shadow: 0 8px 30px rgba(30, 58, 138, 0.4);
+        }
+        
+        /* --- ESTILOS PARA LA NUEVA SECCIÓN DE MÓDULOS DE CCNA --- */
+        .ccna-module-toggle {
+            /* Estilo del botón de título (Caja del módulo) */
+            @apply flex justify-between items-center w-full text-left p-4 rounded-lg font-bold text-xl cursor-pointer transition duration-300;
+        }
+        .ccna-module-toggle.fix-module {
+            @apply bg-gray-800 hover:bg-cyan-900 text-cyan-400 border border-gray-700;
+        }
+        .ccna-module-toggle.break-module {
+            @apply bg-gray-800 hover:bg-yellow-900 text-yellow-400 border border-gray-700;
+        }
+        .ccna-module-content {
+            /* Estilo para el contenido oculto */
+            @apply px-4 py-3 bg-gray-900 rounded-b-lg overflow-hidden transition-all duration-500 ease-in-out;
+            max-height: 0; /* Inicialmente oculto */
+            opacity: 0;
+            margin-top: -1px; /* Para que el borde sea limpio */
+        }
+        .ccna-module-content.active {
+            max-height: 600px; /* Suficiente altura para el contenido, si es más, usar 'none' */
+            opacity: 1;
+            box-shadow: inset 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .ccna-subtopic-link {
+            /* Estilo para los enlaces de los subtemas */
+            @apply block py-2 px-3 text-slate-300 hover:bg-gray-700 hover:text-white rounded-md transition duration-200 text-base font-mono;
+        }
+        /* Flecha de rotación */
+        .arrow-icon {
+            transition: transform 0.3s ease;
+        }
+        .arrow-icon.rotated {
+            transform: rotate(90deg);
+        }
+        
+        /* --- ESTILOS DE TARJETAS DE POSTS / SIMULACROS / COMANDOS --- */
+        .card-shadow {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            @apply bg-gray-800 rounded-xl overflow-hidden shadow-lg border border-gray-700;
+        }
+        .card-shadow:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .nav-dropdown-btn {
+            @apply px-4 py-2 text-sm font-bold text-slate-400 hover:text-white transition duration-150 rounded-lg bg-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-md;
+        }
+        .contact-icon {
+            fill: currentColor;
+            width: 1.5rem;
+            height: 1.5rem;
+            transition: color 0.2s;
+        }
+        .cta-button {
+            @apply fix-color-bg text-gray-900 font-bold py-3 px-10 rounded-lg shadow-xl hover:bg-cyan-300 transition duration-300 text-lg transform hover:scale-105;
+        }
+    </style>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Lógica para el menú de navegación (Drop-downs)
+        const redesBtn = document.getElementById('redes-btn');
+        const redesMenu = document.getElementById('redes-menu');
+        const cyberBtn = document.getElementById('cyber-btn');
+        const cyberMenu = document.getElementById('cyber-menu');
+        
+        const allMenus = [redesMenu, cyberMenu];
+
+        function toggleMenu(menuToToggle) {
+            const isHidden = menuToToggle.classList.contains('hidden');
+            
+            allMenus.forEach(menu => {
+                menu.classList.add('hidden');
+            });
+            
+            if (isHidden) {
+                menuToToggle.classList.remove('hidden');
+            }
+        }
+
+        redesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMenu(redesMenu);
+        });
+
+        cyberBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMenu(cyberMenu);
+        });
+
+        document.addEventListener('click', () => {
+            allMenus.forEach(menu => menu.classList.add('hidden'));
+        });
+
+        redesMenu.addEventListener('click', (e) => e.stopPropagation());
+        cyberMenu.addEventListener('click', (e) => e.stopPropagation());
+        
+        // -------------------------------------------------------------------
+        // --- LÓGICA CORREGIDA DEL ACORDEÓN DE MÓDULOS CCNA ---
+        // Se añade (e) => {... y e.stopPropagation()/e.preventDefault()
+        // -------------------------------------------------------------------
+        const moduleToggles = document.querySelectorAll('.ccna-module-toggle');
+
+        moduleToggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => { // <-- Se añade 'e' aquí
+                e.stopPropagation(); // <-- Detiene la propagación del clic
+                e.preventDefault();  // <-- Detiene la acción predeterminada
+                
+                const targetId = toggle.getAttribute('data-target');
+                const targetContent = document.getElementById(targetId);
+                const targetArrow = toggle.querySelector('.arrow-icon');
+
+                // Si se está usando la clase 'hidden' para empezar, la removemos aquí:
+                if (targetContent.classList.contains('hidden')) {
+                    targetContent.classList.remove('hidden');
+                }
+
+                const isCurrentlyActive = targetContent.classList.contains('active');
+
+                // 1. Cerrar todos los contenidos y restablecer flechas
+                document.querySelectorAll('.ccna-module-content').forEach(content => {
+                    if (content !== targetContent) {
+                        content.classList.remove('active');
+                    }
+                });
+                document.querySelectorAll('.arrow-icon').forEach(arrow => {
+                    if (arrow !== targetArrow) {
+                        arrow.classList.remove('rotated');
+                    }
+                });
+
+                // 2. Abrir o cerrar el contenido seleccionado
+                if (isCurrentlyActive) {
+                    targetContent.classList.remove('active');
+                    targetArrow.classList.remove('rotated');
+                } else {
+                    targetContent.classList.add('active');
+                    targetArrow.classList.add('rotated');
+                }
+            });
+        });
+    });
+</script>
+
+
+
+</head>
+<body class="text-slate-200">
+ 
+
+<header class="bg-gray-900 shadow-xl sticky top-0 z-50 border-b border-cyan-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        
+        <a href="#" class="text-3xl font-black tracking-widest font-sans">
+            <span class="break-color">BREAK</span><span class="fix-color">NFIX</span>
+        </a>
+
+        <nav class="flex space-x-4 text-sm font-semibold">
+            
+            <div class="relative inline-block text-left">
+                <button id="redes-btn" class="nav-dropdown-btn hover:text-cyan-400">
+                    Redes (CCNA) <span class="ml-1 text-cyan-400">&#x25BE;</span>
+                </button>
+                <div id="redes-menu" class="absolute right-0 mt-2 w-56 bg-gray-900 rounded-md shadow-lg hidden">
+                    <ul class="flex flex-col text-sm font-mono text-slate-300">
+                        <li><a href="#ruta-ccna" class="px-4 py-2 hover:bg-cyan-900 hover:text-cyan-300">Ruta de Aprendizaje</a></li>
+                        <li><a href="#simulacros" class="px-4 py-2 hover:bg-cyan-900 hover:text-cyan-300">Simulacros</a></li>
+                        <li><a href="#labs-proyectos" class="px-4 py-2 hover:bg-cyan-900 hover:text-cyan-300">Labs y Proyectos</a></li>
+                        <li><a href="#comandos" class="px-4 py-2 border-t border-gray-700 hover:bg-cyan-900 hover:text-cyan-300">Comandos Rápidos</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="relative inline-block text-left">
+                <button id="cyber-btn" class="nav-dropdown-btn break-color hover:text-yellow-300 border border-yellow-500">
+                    Ciberseguridad <span class="ml-1 text-yellow-400">&#x25BE;</span>
+                </button>
+                <div id="cyber-menu" class="absolute right-0 mt-2 w-56 bg-gray-900 rounded-md shadow-lg hidden">
+                    <div role="menu" aria-orientation="vertical" aria-labelledby="cyber-btn" class="text-sm font-mono text-slate-300">
+                        <a href="#seguridad-fundamentos" class="px-4 py-2 hover:bg-yellow-900 hover:text-yellow-300 block" role="menuitem">Fundamentos y Conceptos Clave</a>
+                        <a href="#hardening-dispositivos" class="px-4 py-2 hover:bg-yellow-900 hover:text-yellow-300 block" role="menuitem">Hardening de Dispositivos (SSH, Passwords)</a>
+                        <a href="#acls-l2" class="px-4 py-2 hover:bg-yellow-900 hover:text-yellow-300 block" role="menuitem">ACLs y Seguridad L2</a>
+                        <a href="#vpn-aaa" class="px-4 py-2 border-t border-gray-700 mt-1 pt-2 hover:bg-yellow-900 hover:text-yellow-300 block" role="menuitem">VPNs y AAA</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative inline-block text-left">
+                <a href="#sobre-mi" class="nav-dropdown-btn hover: px-3 py-2 rounded">
+                    Sobre mí
+                </a>
+            </div>
+        </nav>
+    </div>
+</header>
+
+
+    <section class="hero-section text-white py-20 md:py-28">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-4 tracking-tight">
+                <span class="fix-color">CREAR</span> <span class="break-color">ROMPER</span> <span class="fix-color">ARREGLAR</span>
+            </h1>
+            <p class="text-xl md:text-2xl font-light text-slate-300 mb-10 max-w-4xl mx-auto">
+                Domina la configuración (CREAR), inyecta fallas de red (ROMPER) y aplica **troubleshooting** avanzado (ARREGLAR). Tu ruta CCNA con mentalidad de Ciberseguridad.
+            </p>
+            <a href="#articulos" class="cta-button">
+                Ver Últimos Reportes (Posts) &rarr;
+            </a>
+        </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        <h2 class="text-3xl font-extrabold text-white mb-10 border-b-4 border-yellow-400 pb-2" id="articulos">📡 Últimos Reportes (Novedades en la Portada)</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <article class="card-shadow">
+                <div class="h-48 bg-cyan-900 flex items-center justify-center border-b border-cyan-700">
+                    <span class="text-4xl text-cyan-400">&#x2702;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold fix-color uppercase mb-2">Networking | CCNA 2.0</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-cyan-400 cursor-pointer text-slate-200">
+                        VLANs: ¿Por qué tener múltiples casas en un solo edificio? (Analogía Simple)
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Desmenuzamos el concepto de las Redes de Área Local Virtuales (VLANs), cómo segmentan el tráfico y por qué son cruciales para la seguridad.
+                    </p>
+                    <a href="2_1_vlans.html" class="fix-color hover:text-cyan-300 font-semibold text-sm flex items-center transition duration-150">
+                        Leer Artículo &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow" id="ciberseguridad">
+                <div class="h-48 bg-yellow-900 flex items-center justify-center border-b border-yellow-700">
+                    <span class="text-4xl text-yellow-400">&#x1F47B;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold break-color uppercase mb-2">Ciberseguridad | LINUX</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-yellow-400 cursor-pointer text-slate-200">
+                        Comandos Básicos de Linux para el SOC: Tu Primer Día de Hacking.
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Guía de comandos esenciales de Linux que todo aspirante a Pentester o analista SOC debe dominar para moverse en la terminal.
+                    </p>
+                    <a href="cyber_linux_basic_commands.html" class="break-color hover:text-yellow-300 font-semibold text-sm flex items-center transition duration-150">
+                        Leer Artículo &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow">
+                <div class="h-48 bg-blue-900 flex items-center justify-center border-b border-blue-700">
+                    <span class="text-4xl text-blue-400">&#x1F916;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold text-blue-400 uppercase mb-2">Automation | 6.0 Programmability</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-blue-400 cursor-pointer text-slate-200">
+                        JSON vs YAML: El Lenguaje Secreto de los Dispositivos.
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Entiende la diferencia entre los formatos de datos clave que usan las APIs REST para automatizar la configuración de redes.
+                    </p>
+                    <a href="6_3_json_yaml.html" class="text-blue-400 hover:text-blue-300 font-semibold text-sm flex items-center transition duration-150">
+                        Leer Artículo &rarr;
+                    </a>
+                </div>
+            </article>
+        </div>
+    </section>
+    
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id="ruta-ccna">
+
+    <h2 class="text-4xl font-extrabold text-white mb-12 border-b-4 border-cyan-400 pb-3">Índice de Módulos: CCNA 200-301</h2>
+    <p class="text-slate-400 mb-8 max-w-4xl font-mono">
+        Haz clic en cada módulo para ver los subtemas. Cada subtema es una misión de configuración y reparación (<span class="fix-color">FIX</span>).
+    </p>
+
+    <div class="space-y-4">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle fix-module" data-target="module-1-content">
+                    <span>1.0 Fundamentos de Redes (20%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-1-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="1_1_components.html" class="ccna-subtopic-link">1.1 Rol y función de componentes</a></li>
+                        <li><a href="1_2_topology.html" class="ccna-subtopic-link">1.2 Características de arquitecturas</a></li>
+                        <li><a href="1_3_cabling.html" class="ccna-subtopic-link">1.3 Tipos de interfaces y cableado</a></li>
+                        <li><a href="1_4_issues.html" class="ccna-subtopic-link">1.4 Identificar problemas de interfaces</a></li>
+                        <li><a href="1_5_tcp_udp.html" class="ccna-subtopic-link">1.5 Comparar TCP vs UDP</a></li>
+                        <li><a href="1_6_ipv4_subnetting.html" class="ccna-subtopic-link">1.6 Configurar y verificar IPv4 y Subnetting</a></li>
+                        <li><a href="1_7_private_ip.html" class="ccna-subtopic-link">1.7 Direccionamiento IPv4 privado</a></li>
+                        <li><a href="1_8_ipv6.html" class="ccna-subtopic-link">1.8 Configurar y verificar IPv6</a></li>
+                        <li><a href="1_9_ipv6_types.html" class="ccna-subtopic-link">1.9 Describir tipos de dirección IPv6</a></li>
+                        <li><a href="1_10_verify_ip.html" class="ccna-subtopic-link">1.10 Verificar parámetros IP en Client OS</a></li>
+                        <li><a href="1_11_wireless_principles.html" class="ccna-subtopic-link">1.11 Principios Inalámbricos</a></li>
+                        <li><a href="1_12_virtualization.html" class="ccna-subtopic-link">1.12 Fundamentos de Virtualización</a></li>
+                        <li><a href="1_13_switching.html" class="ccna-subtopic-link">1.13 Conceptos de Switching</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle fix-module" data-target="module-2-content">
+                    <span>2.0 Acceso a la Red (20%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-2-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="2_1_vlans.html" class="ccna-subtopic-link">2.1 Configurar y verificar VLANs</a></li>
+                        <li><a href="2_2_interswitch.html" class="ccna-subtopic-link">2.2 Configurar y verificar conectividad Interswitch</a></li>
+                        <li><a href="2_3_discovery.html" class="ccna-subtopic-link">2.3 Configurar y verificar protocolos de descubrimiento</a></li>
+                        <li><a href="2_4_etherchannel.html" class="ccna-subtopic-link">2.4 Configurar y verificar EtherChannel</a></li>
+                        <li><a href="2_5_spanning_tree.html" class="ccna-subtopic-link">2.5 Interpretar Rapid PVST+ Spanning Tree</a></li>
+                        <li><a href="2_6_wireless_arch.html" class="ccna-subtopic-link">2.6 Arquitecturas Inalámbricas y modos AP</a></li>
+                        <li><a href="2_7_wlan_infra.html" class="ccna-subtopic-link">2.7 Conexiones de infraestructura WLAN</a></li>
+                        <li><a href="2_8_management_access.html" class="ccna-subtopic-link">2.8 Acceso a administración de dispositivos</a></li>
+                        <li><a href="2_9_wlan_gui.html" class="ccna-subtopic-link">2.9 Configuración WLAN GUI</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle fix-module" data-target="module-3-content">
+                    <span>3.0 Conectividad IP (25%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-3-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="3_1_routing_table.html" class="ccna-subtopic-link">3.1 Componentes de la Tabla de Enrutamiento</a></li>
+                        <li><a href="3_2_forwarding_decision.html" class="ccna-subtopic-link">3.2 Determinación de decisiones de reenvío</a></li>
+                        <li><a href="3_3_static_routing.html" class="ccna-subtopic-link">3.3 Configurar y verificar Enrutamiento Estático</a></li>
+                        <li><a href="3_4_ospfv2.html" class="ccna-subtopic-link">3.4 Configurar y verificar OSPFv2</a></li>
+                        <li><a href="3_5_fhpr.html" class="ccna-subtopic-link">3.5 Propósito y funciones de FHRPs</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+
+            
+             <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle fix-module" data-target="module-4-content">
+                    <span>4.0 Servicios IP (10%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-4-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="4_1_nat.html" class="ccna-subtopic-link">4.1 Configurar y verificar NAT</a></li>
+                        <li><a href="4_2_ntp.html" class="ccna-subtopic-link">4.2 Configurar y verificar NTP</a></li>
+                        <li><a href="4_3_dhcp_dns.html" class="ccna-subtopic-link">4.3 Rol de DHCP y DNS</a></li>
+                        <li><a href="4_4_snmp.html" class="ccna-subtopic-link">4.4 Función de SNMP</a></li>
+                        <li><a href="4_5_syslog.html" class="ccna-subtopic-link">4.5 Uso de Syslog</a></li>
+                        <li><a href="4_6_dhcp_relay.html" class="ccna-subtopic-link">4.6 Configurar y verificar DHCP Client y Relay</a></li>
+                        <li><a href="4_7_qos.html" class="ccna-subtopic-link">4.7 Reenvío PHB para QoS</a></li>
+                        <li><a href="4_8_ssh.html" class="ccna-subtopic-link">4.8 Configurar SSH para acceso remoto</a></li>
+                        <li><a href="4_9_tftp_ftp.html" class="ccna-subtopic-link">4.9 Capacidades y funciones de TFTP/FTP</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+        
+        
+        
+            
+            <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle break-module" data-target="module-5-content">
+                    <span>5.0 Fundamentos de Seguridad (15%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-5-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="5_1_key_concepts.html" class="ccna-subtopic-link">5.1 Conceptos de Seguridad</a></li>
+                        <li><a href="5_2_security_program.html" class="ccna-subtopic-link">5.2 Elementos del Programa de Seguridad</a></li>
+                        <li><a href="5_3_local_passwords.html" class="ccna-subtopic-link">5.3 Configurar y verificar control de acceso con contraseñas locales</a></li>
+                        <li><a href="5_4_password_policy.html" class="ccna-subtopic-link">5.4 Política de Contraseñas</a></li>
+                        <li><a href="5_5_ipsec_vpn.html" class="ccna-subtopic-link">5.5 VPNs IPsec</a></li>
+                        <li><a href="5_6_acls.html" class="ccna-subtopic-link">5.6 Configurar y verificar ACLs</a></li>
+                        <li><a href="5_7_l2_security.html" class="ccna-subtopic-link">5.7 Configurar y verificar Seguridad L2</a></li>
+                        <li><a href="5_8_aaa.html" class="ccna-subtopic-link">5.8 Comparar conceptos AAA</a></li>
+                        <li><a href="5_9_wireless_security.html" class="ccna-subtopic-link">5.9 Protocolos de Seguridad Inalámbrica</a></li>
+                        <li><a href="5_10_wlan_gui_wpa2.html" class="ccna-subtopic-link">5.10 Configurar WLAN GUI con WPA2 PSK</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                <button class="ccna-module-toggle fix-module" data-target="module-6-content">
+                    <span>6.0 Automatización (10%)</span>
+                    <span class="arrow-icon">&#x25B6;</span>
+                </button>
+                <div id="module-6-content" class="ccna-module-content hidden">
+                    <ul class="space-y-1 pl-0">
+                        <li><a href="6_1_automation_impact.html" class="ccna-subtopic-link">6.1 Impacto de la automatización en la gestión de red</a></li>
+                        <li><a href="6_2_traditional_vs_controller.html" class="ccna-subtopic-link">6.2 Redes Tradicionales vs Controladores</a></li>
+                        <li><a href="6_3_sda.html" class="ccna-subtopic-link">6.3 Arquitectura SD</a></li>
+                        <li><a href="6_4_ai_ml_networking.html" class="ccna-subtopic-link">6.4 AI y Machine Learning en redes</a></li>
+                        <li><a href="6_5_rest_api.html" class="ccna-subtopic-link">6.5 Características de APIs REST</a></li>
+                        <li><a href="6_6_ansible_terraform.html" class="ccna-subtopic-link">6.6 Mecanismos de configuración</a></li>
+                        <li><a href="6_7_json_data.html" class="ccna-subtopic-link">6.7 Componentes de datos JSON</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+</main>
+
+
+
+    
+    <section id="simulacros" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 class="text-3xl font-extrabold mb-10 text-yellow-400 border-b-4 border-yellow-400 pb-2">Simulacros: Inyección de Fallas (BREAK)</h2>
+        <p class="text-slate-400 font-mono mb-8 max-w-4xl">Aquí irán los 3 escenarios de *troubleshooting* más comunes donde te pediremos ARREGLAR lo que intencionalmente ROMPIMOS. ¡Prepárate para el *debug*!</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <article class="card-shadow">
+                <div class="h-48 bg-yellow-900/50 flex items-center justify-center border-b border-yellow-700">
+                    <span class="text-4xl text-yellow-400">&#x26A0;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold break-color uppercase mb-2">3.4 Conectividad IP</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-yellow-400 cursor-pointer text-slate-200">
+                        BREAK: OSPF Adyacencia Fallida
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Se inyectaron fallas de *network type* y *area mismatch*. Objetivo: restaurar la adyacencia completa.
+                    </p>
+                    <a href="sim_ospf_break.html" class="break-color hover:text-yellow-300 font-semibold text-sm flex items-center transition duration-150">
+                        Iniciar Misión de Debugging &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow">
+                <div class="h-48 bg-yellow-900/50 flex items-center justify-center border-b border-yellow-700">
+                    <span class="text-4xl text-yellow-400">&#x1F528;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold break-color uppercase mb-2">2.1/3.1 Acceso y Conectividad</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-yellow-400 cursor-pointer text-slate-200">
+                        BREAK: Falla de Ruta Inter-VLAN
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Un *trunk* incorrecto o un error en la subinterfaz. Corregir la conectividad entre VLANs en un Router-on-a-Stick.
+                    </p>
+                    <a href="sim_intervlan_break.html" class="break-color hover:text-yellow-300 font-semibold text-sm flex items-center transition duration-150">
+                        Iniciar Misión de Debugging &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow">
+                <div class="h-48 bg-yellow-900/50 flex items-center justify-center border-b border-yellow-700">
+                    <span class="text-4xl text-yellow-400">&#x1F512;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold break-color uppercase mb-2">5.7 Fundamentos de Seguridad</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-yellow-400 cursor-pointer text-slate-200">
+                        BREAK: Port Security Bloqueado
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Una interfaz de switch se puso en estado *err-disabled*. Identificar la causa y restaurar el acceso de forma segura.
+                    </p>
+                    <a href="sim_portsecurity_break.html" class="break-color hover:text-yellow-300 font-semibold text-sm flex items-center transition duration-150">
+                        Iniciar Misión de Debugging &rarr;
+                    </a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section id="comandos" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 class="text-3xl font-extrabold mb-10 text-cyan-400 border-b-4 border-cyan-400 pb-2">Comandos: Cheat Sheet</h2>
+        <p class="text-slate-400 font-mono mb-8 max-w-4xl">Una referencia rápida de los 3 comandos de configuración y verificación más importantes para tu examen CCNA. Tu herramienta **FIX**.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <article class="card-shadow">
+                <div class="h-48 bg-cyan-900/50 flex items-center justify-center border-b border-cyan-700">
+                    <span class="text-4xl text-cyan-400">&#x1F4BB;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold fix-color uppercase mb-2">Comando Esencial | Verificación Rápida</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-cyan-400 cursor-pointer text-slate-200">
+                        `show ip int brief`
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        El primer comando en *troubleshooting*. Muestra el estado de las interfaces y sus IPs asignadas (Protocol/Status).
+                    </p>
+                    <a href="cmd_show_ip_int_brief.html" class="fix-color hover:text-cyan-300 font-semibold text-sm flex items-center transition duration-150">
+                        Ver Detalles &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow">
+                <div class="h-48 bg-cyan-900/50 flex items-center justify-center border-b border-cyan-700">
+                    <span class="text-4xl text-cyan-400">&#x1F50E;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold fix-color uppercase mb-2">Comando Esencial | Configuración</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-cyan-400 cursor-pointer text-slate-200">
+                        `show run | section`
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        Perfecto para *debug* rápido. Filtra la configuración completa para ver solo la sección relevante (e.g., OSPF, Interface).
+                    </p>
+                    <a href="cmd_show_run_section.html" class="fix-color hover:text-cyan-300 font-semibold text-sm flex items-center transition duration-150">
+                        Ver Detalles &rarr;
+                    </a>
+                </div>
+            </article>
+
+            <article class="card-shadow">
+                <div class="h-48 bg-cyan-900/50 flex items-center justify-center border-b border-cyan-700">
+                    <span class="text-4xl text-cyan-400">&#x1F4A1;</span> </div>
+                <div class="p-6">
+                    <p class="text-xs font-semibold fix-color uppercase mb-2">Comando Esencial | Solución Rápida</p>
+                    <h3 class="text-xl font-bold mb-3 hover:text-cyan-400 cursor-pointer text-slate-200">
+                        `no shutdown`
+                    </h3>
+                    <p class="text-slate-400 text-sm mb-4 font-mono">
+                        El comando más importante para arreglar interfaces "apagadas" por error. Asegura que la capa física (L1) esté activa.
+                    </p>
+                    <a href="cmd_no_shutdown.html" class="fix-color hover:text-cyan-300 font-semibold text-sm flex items-center transition duration-150">
+                        Ver Detalles &rarr;
+                    </a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="bg-gray-800 py-16 mt-12 text-white shadow-inner" id="labs-proyectos">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl font-extrabold mb-4 text-cyan-400">LABS: /root/packet-tracer-challenges</h2>
+            <p class="text-lg text-slate-400 mb-8 max-w-2xl mx-auto font-mono">
+                Simulaciones de fallas inyectadas (*intentional failure*) para poner a prueba tu conocimiento de *troubleshooting* nivel CCNA.
+            </p>
+            <button class="cta-button">
+                Ver Repositorio de Fallas <span class="text-yellow-900">&rarr;</span>
+            </button>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-white pt-12 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-b border-gray-700 pb-8 mb-8">
+                
+                <div>
+                    <h3 class="text-2xl font-black mb-3 font-sans">
+                        <span class="break-color">BREAK</span><span class="fix-color">NFIX</span>
+                    </h3>
+                    <p class="text-slate-400 text-sm font-mono">
+                        ~# echo "CREAR, ROMPER Y ARREGLAR. El ciclo fundamental de un Ingeniero de Redes y Ciberseguridad."
+                    </p>
+                </div>
+
+
+                <!--   
+                <div>
+                    <h4 class="text-lg font-bold mb-3 fix-color">Navegación</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#ruta-ccna" class="text-slate-400 hover:text-cyan-400 transition duration-150 font-mono">01_Ruta_CCNA</a></li>
+                        <li><a href="#simulacros" class="text-slate-400 hover:text-cyan-400 transition duration-150 font-mono">02_Simulacros</a></li>
+                        <li><a href="#labs-proyectos" class="text-slate-400 hover:text-cyan-400 transition duration-150 font-mono">03_Labs</a></li>
+                        <li><a href="#analogias" class="text-slate-400 hover:text-cyan-400 transition duration-150 font-mono">07_Analogías_Simples</a></li>
+                    </ul>
+                </div>
+
+                 -->
+
+                <div>
+                    <h4 class="text-lg font-bold mb-3 break-color">Contacto: $ whoami</h4>
+                    <div class="space-y-3">
+                        
+                        <div class="flex items-center space-x-3">
+                            <a href="https://www.linkedin.com/in/oscar-gonzalez-baldizon-059003166" target="_blank" class="text-slate-500 hover:text-cyan-400 transition duration-150" aria-label="Perfil de LinkedIn">
+                                <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.268-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                                </svg>
+                            </a>
+                            <span class="text-slate-400 font-mono">oscar-gonzalez-baldizon-059003166</span> 
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <a href="mailto:oscar.gonzalez.baldizon@gmail.com" class="text-slate-500 hover:text-yellow-400 transition duration-150" aria-label="Enviar correo electrónico">
+                                <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/>
+                                </svg>
+                            </a>
+                            <span class="text-slate-400 font-mono">oscar.gonzalez.baldizon@gmail.com</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-xs text-gray-600 pt-4">
+                <p>(©) BREAKNFIX 2025 </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

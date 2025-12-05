@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard CCNA - Ejercicios con Solución</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Estilos de Fondo y Globales */
+        body {
+            background-color: #0a192f; /* Azul oscuro de fondo */
+            color: #ccd6f6; /* Texto claro */
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Estilos de la Tarjeta (Card) */
+        .card {
+            background-color: #112240; /* Color de tarjeta más claro */
+            border: 1px solid #233554;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(100, 255, 218, 0.1);
+            cursor: pointer;
+        }
+        .card.completed {
+            border-left: 5px solid #64ffda; /* Borde verde para completados */
+            opacity: 0.7;
+        }
+
+        /* Estilos de Tags de Dificultad */
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .tag-basico { background-color: #3b82f6; color: white; } /* Azul */
+        .tag-medio { background-color: #f59e0b; color: #1f2937; } /* Naranja */
+        .tag-intermedio { background-color: #ef4444; color: white; } /* Rojo */
+        .tag-avanzado { background-color: #8b5cf6; color: white; } /* Púrpura */
+        
+        /* Estilos de la Barra de Progreso */
+        #progress-bar {
+            background-color: #64ffda; /* Verde neón */
+            transition: width 0.5s ease-in-out;
+        }
+
+        /* Estilo Checkbox Personalizado */
+        .custom-checkbox {
+            appearance: none;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #64ffda;
+            border-radius: 3px;
+            background-color: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+        .custom-checkbox:checked {
+            background-color: #64ffda;
+            border-color: #64ffda;
+        }
+        .custom-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #0a192f;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        /* Estilo para la Consola (CMD) que se aplica a los bloques de código en el .md */
+        .cmd-style {
+            background-color: #000000; /* Fondo negro */
+            color: #64ffda; /* Texto verde brillante */
+            border: 1px solid #64ffda;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: 'Roboto Mono', monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        /* Estilo para el contenido de la modal (para listas, encabezados, etc. del Markdown) */
+        #modal-solution-steps h3 {
+            font-size: 1.5rem; /* h3 en markdown */
+            font-weight: bold;
+            color: #64ffda;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #233554;
+            padding-bottom: 0.5rem;
+        }
+        #modal-solution-steps h4 {
+            font-size: 1.25rem; /* h4 en markdown */
+            font-weight: bold;
+            color: #ccd6f6;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        #modal-solution-steps li {
+            margin-left: 1.5rem;
+            list-style-type: disc;
+            color: #ccd6f6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-[#64ffda] mb-2">CCNA Practice Lab</h1>
+            <p class="text-slate-400">Rastrea tu progreso a través de los ejercicios esenciales de Cisco.</p>
+        </header>
+
+        <div class="mb-8 p-4 bg-[#112240] rounded-lg shadow-xl">
+            <h2 class="text-xl font-semibold mb-2">Progreso General</h2>
+            <div class="w-full bg-[#233554] rounded-full h-4 mb-2">
+                <div id="progress-bar" class="h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-sm text-slate-400 text-right">0 / 0 (0%)</p>
+        </div>
+
+        <div class="mb-8 flex flex-wrap gap-4 items-center p-4 bg-[#112240] rounded-lg shadow-xl">
+            <input type="text" id="search-input" placeholder="Buscar por nombre o descripción..." class="flex-grow p-3 rounded-md bg-[#0a192f] border border-[#233554] text-slate-300 placeholder-slate-500 focus:ring-2 focus:ring-[#64ffda] outline-none">
+            
+            <select id="filter-difficulty" class="p-3 rounded-md bg-[#0a192f] border border-[#233554] text-slate-300">
+                <option value="all">Todas las Dificultades</option>
+                <option value="Básico">Básico</option>
+                <option value="Medio">Medio</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
+            </select>
+            
+            <select id="filter-category" class="p-3 rounded-md bg-[#0a192f] border border-[#233554] text-slate-300">
+                <option value="all">Todas las Categorías</option>
+                </select>
+        </div>
+
+        <div id="exercise-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+
+        <div id="no-results" class="hidden text-center py-16">
+            <p class="text-2xl font-semibold text-slate-400">😕 No se encontraron ejercicios.</p>
+            <p class="text-slate-500 mt-2">Intenta ajustar tus filtros de búsqueda.</p>
+        </div>
+    </div> 
+
+    <div id="solution-modal" class="fixed inset-0 z-50 bg-black bg-opacity-80 hidden flex justify-center items-center p-4">
+        <div class="bg-[#112240] rounded-lg shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+            
+            <div class="p-6 border-b border-[#233554] flex justify-between items-center sticky top-0 bg-[#112240] z-20">
+                <h2 id="modal-title" class="text-2xl font-bold text-teal-400">Título del Ejercicio</h2>
+                <button id="close-modal-btn" class="text-slate-300 hover:text-red-400 text-3xl leading-none">
+                    &times;
+                </button>
+            </div>
+
+            <div class="p-6">
+                <h3 class="text-xl font-semibold mb-2 text-slate-100">💡 Objetivo</h3>
+                <p id="modal-objective" class="text-slate-300 mb-6 italic"></p>
+
+                <h3 class="text-xl font-semibold mb-4 text-slate-100 border-b border-[#233554] pb-2">✅ Solución Detallada</h3>
+                
+                <div id="modal-solution-steps" class="space-y-4">
+                    </div>
+                
+                <p class="mt-8 text-xs text-slate-500 text-center">Nota: Los comandos pueden variar ligeramente dependiendo del modelo de equipo Cisco.</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        // --- 1. DATOS DE LOS EJERCICIOS (Nueva Estructura) ---
+        const exercisesData = [
+            // =========================================================
+            //  AQUÍ DEBES PEGAR TUS EJERCICIOS CON LA PROPIEDAD 'file'
+            // =========================================================
+            { 
+                id: 1, 
+                name: "Configurar hostname en switch", 
+                objective: "Cambiar el nombre por defecto del switch/router.", 
+                difficulty: "Básico", 
+                category: "Básicos",
+                file: "C:\RUTA REDES 2025\SITIO DE REDES Y CIBERSEC\DICIEMBRE 25\CCNA\labs/labs/ej1.md" // ⬅️ PEGAR LA RUTA DEL .md AQUÍ
+            },
+            { 
+                id: 2, 
+                name: "Configurar Inter-VLAN Routing (ROAS)", 
+                objective: "Permitir la comunicación entre diferentes VLANs.", 
+                difficulty: "Medio", 
+                category: "Routing",
+                file: "solutions/ej_002.md" // ⬅️ PEGAR LA RUTA DEL .md AQUÍ
+            },
+            { 
+                id: 3, 
+                name: "Configurar Telnet y SSH", 
+                objective: "Habilitar el acceso remoto seguro.", 
+                difficulty: "Intermedio", 
+                category: "Seguridad",
+                file: "solutions/ej_003.md" // ⬅️ PEGAR LA RUTA DEL .md AQUÍ
+            },
+            { 
+                id: 4, 
+                name: "Configurar Port-Security", 
+                objective: "Asegurar un puerto para solo aceptar una MAC.", 
+                difficulty: "Medio", 
+                category: "Seguridad",
+                file: null // Si el archivo aún no existe, usa null.
+            }
+            // =========================================================
+            //  FIN DE LA LISTA DE EJERCICIOS
+            // =========================================================
+        ];
+
+        // --- 2. LÓGICA DE LA APLICACIÓN ---
+
+        const TOTAL_EXERCISES = exercisesData.length;
+        const exerciseGrid = document.getElementById('exercise-grid');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const searchInput = document.getElementById('search-input');
+        const filterDifficulty = document.getElementById('filter-difficulty');
+        const filterCategory = document.getElementById('filter-category');
+        const noResults = document.getElementById('no-results');
+
+        // Elementos de la modal
+        const solutionModal = document.getElementById('solution-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalTitle = document.getElementById('modal-title');
+        const modalObjective = document.getElementById('modal-objective');
+        const modalSolutionSteps = document.getElementById('modal-solution-steps'); 
+
+        // --- Funciones de Utilidad (sin cambios) ---
+
+        function getProgress() {
+            try {
+                const progress = JSON.parse(localStorage.getItem('ccna_progress')) || {};
+                return progress;
+            } catch (e) {
+                console.error("Error al leer localStorage:", e);
+                return {};
+            }
+        }
+
+        function saveProgress(id, isCompleted) {
+            const progress = getProgress();
+            if (isCompleted) {
+                progress[id] = true;
+            } else {
+                delete progress[id];
+            }
+            localStorage.setItem('ccna_progress', JSON.stringify(progress));
+            updateProgressDisplay();
+            renderExercises(); 
+        }
+
+        function updateProgressDisplay() {
+            const progress = getProgress();
+            const completedCount = Object.keys(progress).length;
+            const percentage = TOTAL_EXERCISES > 0 ? Math.round((completedCount / TOTAL_EXERCISES) * 100) : 0;
+
+            progressText.textContent = `${completedCount} / ${TOTAL_EXERCISES} (${percentage}%)`;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        // --- Funciones de Modal (LECTURA DE MARKDOWN) ---
+
+        async function openModal(exercise) {
+            modalTitle.textContent = `#${exercise.id}. ${exercise.name}`;
+            modalObjective.textContent = exercise.objective;
+            modalSolutionSteps.innerHTML = ''; 
+            solutionModal.classList.remove('hidden');
+
+            if (!exercise.file) {
+                modalSolutionSteps.innerHTML = '<p class="text-red-400 text-center py-8">🚨 Solución pendiente de documentación. ¡No se ha asignado un archivo Markdown!</p>';
+                return;
+            }
+
+            modalSolutionSteps.innerHTML = '<p class="text-teal-400 text-center py-8">Cargando solución...</p>';
+            
+
+            try {
+                // 1. Fetch: Lee el contenido del archivo .md (funciona en GitHub Pages)
+                const response = await fetch(exercise.file);
+                if (!response.ok) {
+                    throw new Error(`Error al cargar el archivo: ${response.statusText}`);
+                }
+                const markdownText = await response.text();
+
+                // 2. Convertir Markdown a HTML
+                const htmlContent = marked.parse(markdownText);
+                modalSolutionSteps.innerHTML = htmlContent;
+                
+                // 3. Aplicar el estilo de consola a los bloques de código (```cisco)
+                modalSolutionSteps.querySelectorAll('pre code').forEach(block => {
+                    const cmdText = block.textContent;
+                    // Reemplazar <pre><code>...</code></pre> por <pre class="cmd-style">...</pre>
+                    block.parentElement.outerHTML = `<pre class="cmd-style">${cmdText}</pre>`;
+                });
+
+                // 4. Estilizar y manejar imágenes
+                modalSolutionSteps.querySelectorAll('p').forEach(p => {
+                    // Si el párrafo contiene solo una imagen (sintaxis ![alt](ruta) en Markdown)
+                    const imageElement = p.querySelector('img');
+                    if (imageElement) {
+                         const altText = imageElement.getAttribute('alt') || 'Captura de pantalla';
+                         const src = imageElement.getAttribute('src');
+                        p.innerHTML = `
+                            <div class="mt-4 pt-4 border-t border-[#233554] text-center">
+                                <p class="text-xs text-slate-500 mb-1">Evidencia visual: ${altText}</p>
+                                <img src="${src}" alt="${altText}" class="w-full max-w-lg mx-auto h-auto rounded-sm border border-[#64ffda] shadow-lg">
+                            </div>
+                        `;
+                    }
+                });
+
+
+            } catch (error) {
+                console.error("Error al cargar la solución:", error);
+                modalSolutionSteps.innerHTML = `<p class="text-red-400 text-center py-8">
+                    ❌ Error de conexión o archivo no encontrado. Verifica la ruta: ${exercise.file}.
+                </p>`;
+            }
+        }
+
+        function closeModal() {
+            solutionModal.classList.add('hidden');
+        }
+
+        // --- Renderizado y Filtros (sin cambios) ---
+
+        function createExerciseCard(exercise) {
+            const isCompleted = getProgress()[exercise.id];
+            
+            const card = document.createElement('button');
+            const cleanDifficulty = exercise.difficulty.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            card.className = `card p-5 rounded-lg text-left shadow-lg flex flex-col justify-between ${isCompleted ? 'completed' : ''}`;
+            
+            // Evento para abrir la modal al hacer clic en la tarjeta
+            card.addEventListener('click', () => {
+                openModal(exercise);
+            });
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors">
+                            #${exercise.id}. ${exercise.name}
+                        </span>
+                        <span class="tag tag-${cleanDifficulty}">
+                            ${exercise.difficulty}
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-400 mb-4">${exercise.objective}</p>
+                </div>
+                
+                <div class="mt-auto flex justify-between items-end pt-3 border-t border-[#233554]">
+                    <span class="text-xs text-slate-500 italic">${exercise.category}</span>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" data-id="${exercise.id}" class="custom-checkbox" ${isCompleted ? 'checked' : ''}>
+                        <span class="text-sm text-slate-300">Completado</span>
+                    </label>
+                </div>
+            `;
+
+            // Evento para marcar/desmarcar la casilla de completado
+            const checkbox = card.querySelector('.custom-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation(); 
+                saveProgress(exercise.id, e.target.checked);
+            });
+
+            return card;
+        }
+
+        function renderExercises() {
+            exerciseGrid.innerHTML = '';
+            const searchTerm = searchInput.value.toLowerCase();
+            const difficultyFilter = filterDifficulty.value;
+            const categoryFilter = filterCategory.value;
+
+            const filteredExercises = exercisesData.filter(exercise => {
+                const matchesSearch = 
+                    exercise.name.toLowerCase().includes(searchTerm) ||
+                    exercise.objective.toLowerCase().includes(searchTerm);
+                const matchesDifficulty = difficultyFilter === 'all' || exercise.difficulty === difficultyFilter;
+                const matchesCategory = categoryFilter === 'all' || exercise.category === categoryFilter;
+
+                return matchesSearch && matchesDifficulty && matchesCategory;
+            });
+
+            if (filteredExercises.length === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                filteredExercises.forEach(exercise => {
+                    exerciseGrid.appendChild(createExerciseCard(exercise));
+                });
+            }
+        }
+
+        function populateCategoryFilter() {
+            const categories = [...new Set(exercisesData.map(e => e.category))].sort();
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                filterCategory.appendChild(option);
+            });
+        }
+
+        // --- Inicialización y Event Listeners (sin cambios) ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateCategoryFilter();
+            updateProgressDisplay();
+            renderExercises();
+
+            // Event Listeners para los filtros y búsqueda
+            searchInput.addEventListener('input', renderExercises);
+            filterDifficulty.addEventListener('change', renderExercises);
+            filterCategory.addEventListener('change', renderExercises);
+
+            // Event Listeners para la Modal
+            closeModalBtn.addEventListener('click', closeModal);
+            solutionModal.addEventListener('click', (e) => {
+                // Cerrar la modal si se hace clic en el fondo oscuro
+                if (e.target.id === 'solution-modal') {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

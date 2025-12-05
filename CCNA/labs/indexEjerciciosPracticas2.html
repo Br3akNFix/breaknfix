@@ -1,0 +1,492 @@
+<!-- Chosen Palette: Cybernetic Study -->
+<!-- Application Structure Plan: A single-page dashboard for tracking CCNA lab progress. Key features include a filterable and searchable grid of exercise cards, a visual progress tracker, and persistent state saving using localStorage. This structure was chosen to provide a focused, interactive, and motivational study tool, allowing users to easily navigate the 200 exercises and track their completion over time without needing multiple pages. -->
+<!-- Visualization & Content Choices: The core data (200 exercises) is presented as a grid of interactive cards. Goal: Organize/Explore. Method: HTML/Tailwind card grid. Interaction: Filtering by difficulty/category, searching by name, and marking completion via checkboxes. Difficulty levels are shown as colored tags for quick visual identification. User progress is visualized with a dynamic progress bar. CLI commands have a 'copy' button for practical use. This design avoids complex visualizations and focuses on clarity and utility for a study aid. No SVG/Mermaid used. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Interactiva de Ejercicios CCNA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a192f;
+            color: #ccd6f6;
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .card {
+            background-color: #112240;
+            border: 1px solid #233554;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .card.completed {
+            background-color: #0e2a4a;
+            border-left: 4px solid #64ffda;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .tag-basico { background-color: #1e40af; color: #dbeafe; }
+        .tag-medio { background-color: #15803d; color: #dcfce7; }
+        .tag-intermedio { background-color: #b45309; color: #fef3c7; }
+        .tag-avanzado { background-color: #991b1b; color: #fee2e2; }
+        .tag-experto { background-color: #4a044e; color: #f5d0fe; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a192f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233554;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64ffda;
+        }
+
+        /* Custom checkbox */
+        .custom-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #233554;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            display: inline-block;
+            position: relative;
+        }
+        .custom-checkbox:checked {
+            background-color: #64ffda;
+        }
+        .custom-checkbox:checked::after {
+            content: '✓';
+            font-size: 1.2rem;
+            color: #0a192f;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-100 mb-2">Guía Interactiva de Ejercicios CCNA</h1>
+            <p class="text-lg text-slate-400">Tu hoja de ruta para la certificación. ¡Sigue tu progreso!</p>
+        </header>
+
+        <div class="sticky top-0 z-10 bg-opacity-90 backdrop-blur-sm bg-[#0a192f] py-4 mb-8 rounded-lg">
+            <div id="progress-section" class="mb-6 px-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-semibold text-slate-300">Progreso Total</span>
+                    <span id="progress-text" class="font-mono font-bold text-teal-300">0 / 200 (0%)</span>
+                </div>
+                <div class="w-full bg-[#112240] rounded-full h-4">
+                    <div id="progress-bar" class="bg-teal-400 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
+                <input type="text" id="search-input" placeholder="🔍 Buscar por nombre..." class="w-full p-3 bg-[#112240] border border-[#233554] rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                
+                <select id="filter-difficulty" class="w-full p-3 bg-[#112240] border border-[#233554] rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="all">Toda Dificultad</option>
+                    <option value="Básico">Básico</option>
+                    <option value="Medio">Medio</option>
+                    <option value="Intermedio">Intermedio</option>
+                    <option value="Avanzado">Avanzado</option>
+                    <option value="Experto">Experto</option>
+                </select>
+                
+                <select id="filter-category" class="w-full p-3 bg-[#112240] border border-[#233554] rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <option value="all">Toda Categoría</option>
+                </select>
+            </div>
+        </div>
+
+        <main id="exercise-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </main>
+        
+        <div id="no-results" class="hidden text-center py-16">
+            <p class="text-2xl font-semibold text-slate-400">😕 No se encontraron ejercicios.</p>
+            <p class="text-slate-500 mt-2">Intenta ajustar tus filtros de búsqueda.</p>
+        </div>
+    </div>
+
+    <script>    
+
+
+const exercisesData = [
+    // ¡IMPORTANTE! Asegúrate de que tus 200 ejercicios estén aquí.
+    // He incluido los primeros 130 que mencionaste como ejemplo.
+    // Usa '\n' para los saltos de línea en el campo 'notes' para un mejor formato en la modal.
+    { id: 1, name: "Configurar hostname en switch", objective: "Cambiar el nombre por defecto", difficulty: "Básico", notes: "enable\nconfigure terminal\nhostname [nombre]\nend", category: "Básicos" },
+    { id: 2, name: "Configurar contraseña de consola", objective: "Proteger acceso básico", difficulty: "Básico", notes: "line console 0\npassword [contraseña]\nlogin\nend", category: "Básicos" },
+    { id: 3, name: "Configurar banner MOTD", objective: "Mostrar mensaje de advertencia", difficulty: "Básico", notes: "banner motd #ADVERTENCIA: Acceso solo a personal autorizado#", category: "Básicos" },
+    { id: 4, name: "Configurar contraseñas encriptadas", objective: "Proteger con service password-encryption", difficulty: "Básico", notes: "service password-encryption", category: "Básicos" },
+    { id: 5, name: "Guardar configuración en NVRAM", objective: "Usar copy running-config startup-config", difficulty: "Básico", notes: "copy running-config startup-config", category: "Básicos" },
+    { id: 6, name: "Configurar descripción en una interfaz", objective: "Documentar interfaces", difficulty: "Básico", notes: "interface [tipo/numero]\ndescription [texto]\nend", category: "Básicos" },
+    { id: 7, name: "Configurar IP en una interfaz de router", objective: "Habilitar conectividad", difficulty: "Básico", notes: "interface [tipo/numero]\nip address [ip] [mascara]\nno shutdown\nend", category: "Básicos" },
+    { id: 8, name: "Verificar conectividad con ping", objective: "Probar con ping", difficulty: "Básico", notes: "ping [ip]", category: "Básicos" },
+    { id: 9, name: "Configurar IP estática en un host de Packet Tracer", objective: "Simular un cliente", difficulty: "Básico", notes: "Configurar en las opciones del PC (Desktop > IP Configuration).", category: "Básicos" },
+    { id: 10, name: "Verificar tabla ARP", objective: "Observar direcciones MAC con arp -a", difficulty: "Básico", notes: "En Router: show arp\nEn PC: arp -a (en Command Prompt)", category: "Básicos" },
+    { id: 11, name: "Configurar contraseña enable secret", objective: "Proteger modo privilegiado", difficulty: "Básico", notes: "enable secret [contraseña]", category: "Básicos" },
+    { id: 12, name: "Borrar configuración del dispositivo", objective: "Usar erase startup-config", difficulty: "Básico", notes: "erase startup-config\nreload", category: "Básicos" },
+    { id: 13, name: "Verificar interfaces con show ip int brief", objective: "Revisar estado UP/DOWN", difficulty: "Básico", notes: "show ip interface brief", category: "Básicos" },
+    { id: 14, name: "Asignar dirección IP en un switch SVI (VLAN 1)", objective: "Administrar switch", difficulty: "Básico", notes: "interface vlan 1\nip address [ip] [mascara]\nno shutdown\nend", category: "Básicos" },
+    { id: 15, name: "Probar conectividad entre dos PCs con cable cruzado", objective: "Validar enlace directo", difficulty: "Básico", notes: "Conectar con Cable de cobre cruzado y verificar IP.", category: "Básicos" },
+    { id: 16, name: "Configurar SSH en un switch", objective: "Acceso remoto seguro", difficulty: "Básico", notes: "ip domain-name [nombre.local]\ncrypto key generate rsa\nusername [user] privilege 15 secret [pass]\nline vty 0 15\ntransport input ssh\nlogin local", category: "Básicos" },
+    { id: 17, name: "Configurar reloj en el dispositivo", objective: "Usar clock set", difficulty: "Básico", notes: "clock set HH:MM:SS DD MONTH YYYY\nEjemplo: clock set 16:45:00 3 Dec 2025", category: "Básicos" },
+    { id: 18, name: "Usar el comando show running-config", objective: "Revisar configuración actual", difficulty: "Básico", notes: "show running-config", category: "Básicos" },
+    { id: 19, name: "Hacer un traceroute", objective: "Verificar camino entre dispositivos", difficulty: "Básico", notes: "traceroute [ip]", category: "Básicos" },
+    { id: 20, name: "Guardar configuraciones en archivo texto", objective: "Exportar configs", difficulty: "Básico", notes: "show running-config > copiar todo el texto y pegarlo en un editor.", category: "Básicos" },
+    { id: 21, name: "Configurar VLANs", objective: "Crear VLAN 10, 20, 30", difficulty: "Medio", notes: "vlan 10\nname VENTAS\nvlan 20\nname MARKETING\nvlan 30\nname ADMIN", category: "Switching" },
+    { id: 22, name: "Asignar VLAN a puertos", objective: "Poner PC1 en VLAN 10 y PC2 en VLAN 20", difficulty: "Medio", notes: "interface [tipo/numero]\nswitchport mode access\nswitchport access vlan [número]", category: "Switching" },
+    { id: 23, name: "Configurar trunk en un switch", objective: "Permitir varias VLANs", difficulty: "Medio", notes: "interface [tipo/numero]\nswitchport mode trunk", category: "Switching" },
+    { id: 24, name: "Verificar trunk con show interfaces trunk", objective: "Confirmar estado", difficulty: "Medio", notes: "show interfaces [tipo/numero] trunk", category: "Switching" },
+    { id: 25, name: "Configurar VLAN nativa", objective: "Cambiar de VLAN 1 a VLAN 99", difficulty: "Medio", notes: "interface [tipo/numero]\nswitchport trunk native vlan 99", category: "Switching" },
+    { id: 26, name: "Configurar inter-VLAN routing", objective: "Usar router-on-a-stick", difficulty: "Medio", notes: "interface [tipo/numero].[sub]\nencapsulation dot1Q [vlan_id]\nip address [ip] [mask]\nno shutdown", category: "Switching" },
+    { id: 27, name: "Configurar port-security (MAC estática)", objective: "Permitir solo una MAC", difficulty: "Medio", notes: "interface [tipo/numero]\nswitchport port-security\nswitchport port-security mac-address [mac]\nswitchport port-security violation restrict", category: "Switching" },
+    { id: 28, name: "Configurar port-security (violation restrict)", objective: "Bloquear intrusos", difficulty: "Medio", notes: "switchport port-security violation restrict", category: "Switching" },
+    { id: 29, name: "Configurar port-security (sticky MAC)", objective: "Aprender sticky", difficulty: "Medio", notes: "switchport port-security\nswitchport port-security mac-address sticky\nswitchport port-security maximum 1", category: "Switching" },
+    { id: 30, name: "Habilitar spanning-tree", objective: "Revisar árbol de puentes", difficulty: "Medio", notes: "STP está habilitado por defecto.\nUsar: show spanning-tree", category: "Switching" },
+    { id: 31, name: "Forzar root bridge en un switch", objective: "Usar spanning-tree vlan X root primary", difficulty: "Medio", notes: "spanning-tree vlan [número] root primary", category: "Switching" },
+    { id: 32, name: "Verificar STP con show spanning-tree", objective: "Observar roles de puertos", difficulty: "Medio", notes: "show spanning-tree", category: "Switching" },
+    { id: 33, name: "Configurar EtherChannel (LACP)", objective: "Agrupar enlaces", difficulty: "Medio", notes: "interface range [tipo/rango]\nchannel-group [número] mode active", category: "Switching" },
+    { id: 34, name: "Configurar EtherChannel (PAgP)", objective: "Agrupar enlaces Cisco", difficulty: "Medio", notes: "interface range [tipo/rango]\nchannel-group [número] mode desirable", category: "Switching" },
+    { id: 35, name: "Verificar EtherChannel con show etherchannel summary", objective: "Confirmar", difficulty: "Medio", notes: "show etherchannel summary", category: "Switching" },
+    { id: 36, name: "Configurar Voice VLAN en un puerto", objective: "Preparar para un teléfono IP", difficulty: "Medio", notes: "interface [tipo/numero]\nswitchport mode access\nswitchport access vlan [data_vlan]\nswitchport voice vlan [voice_vlan]", category: "Switching" },
+    { id: 37, name: "Habilitar DHCP snooping", objective: "Proteger la red contra servidores falsos", difficulty: "Medio", notes: "ip dhcp snooping\nip dhcp snooping vlan [número]\ninterface [interfaz trunk]\nip dhcp snooping trust", category: "Switching" },
+    { id: 38, name: "Configurar Dynamic ARP Inspection (DAI)", objective: "Prevenir ataques ARP spoofing", difficulty: "Medio", notes: "ip arp inspection vlan [número]", category: "Switching" },
+    { id: 39, name: "Configurar Storm Control", objective: "Limitar broadcast/multicast", difficulty: "Medio", notes: "interface [tipo/numero]\nstorm-control broadcast level [nivel]", category: "Switching" },
+    { id: 40, name: "Configurar BPDU Guard", objective: "Proteger puertos de usuario contra STP", difficulty: "Medio", notes: "spanning-tree portfast\nspanning-tree bpduguard enable", category: "Switching" },
+    { id: 41, name: "Configurar ruta estática", objective: "Crear una ruta manual para una red", difficulty: "Medio", notes: "ip route [red] [mascara] [siguiente_salto]", category: "Routing" },
+    { id: 42, name: "Configurar ruta predeterminada", objective: "Enviar tráfico desconocido", difficulty: "Medio", notes: "ip route 0.0.0.0 0.0.0.0 [siguiente_salto]", category: "Routing" },
+    { id: 43, name: "Configurar OSPFv2 de un solo área", objective: "Protocolo de enrutamiento dinámico", difficulty: "Medio", notes: "router ospf [ID]\nnetwork [red] [wildcard] area 0", category: "Routing" },
+    { id: 44, name: "Configurar OSPFv2 multiárea", objective: "Dividir una red grande", difficulty: "Medio", notes: "router ospf [ID]\nnetwork [red_area0] [wildcard] area 0\nnetwork [red_area1] [wildcard] area 1", category: "Routing" },
+    { id: 45, name: "Verificar vecinos OSPF", objective: "Confirmar adyacencia de routers", difficulty: "Medio", notes: "show ip ospf neighbor", category: "Routing" },
+    { id: 46, name: "Configurar EIGRP", objective: "Protocolo de enrutamiento Cisco", difficulty: "Medio", notes: "router eigrp [AS_NUMBER]\nnetwork [red]\nno auto-summary", category: "Routing" },
+    { id: 47, name: "Verificar vecinos EIGRP", objective: "Confirmar adyacencia EIGRP", difficulty: "Medio", notes: "show ip eigrp neighbors", category: "Routing" },
+    { id: 48, name: "Redistribuir rutas", objective: "Compartir rutas entre diferentes protocolos", difficulty: "Medio", notes: "router ospf [ID]\nredistribute eigrp [AS_NUMBER] subnets", category: "Routing" },
+    { id: 49, name: "Configurar rutas pasivas", objective: "Evitar que se envíen actualizaciones", difficulty: "Medio", notes: "router [protocolo]\npassive-interface [tipo/numero]", category: "Routing" },
+    { id: 50, name: "Habilitar enrutamiento RIP", objective: "Usar protocolo de enrutamiento simple", difficulty: "Medio", notes: "router rip\nversion 2\nnetwork [red]\nno auto-summary", category: "Routing" },
+    { id: 51, name: "Configurar ruta estática flotante", objective: "Tener una ruta de respaldo", difficulty: "Medio", notes: "ip route [red] [mascara] [siguiente_salto] [AD]\n*AD = Administrative Distance, poner un valor alto (ej: 100)*", category: "Routing" },
+    { id: 52, name: "Usar comando show ip route", objective: "Revisar la tabla de enrutamiento", difficulty: "Medio", notes: "show ip route", category: "Routing" },
+    { id: 53, name: "Configurar NAT estático", objective: "Traducir una IP privada a una IP pública fija", difficulty: "Medio", notes: "ip nat inside source static [local] [global]\ninterface [inside]\nip nat inside\ninterface [outside]\nip nat outside", category: "Routing" },
+    { id: 54, name: "Configurar NAT dinámico", objective: "Traducir un grupo de IPs privadas a un grupo de IPs públicas", difficulty: "Medio", notes: "access-list 1 permit [red] [wildcard]\nip nat pool [pool_name] [start_ip] [end_ip] netmask [mask]\nip nat inside source list 1 pool [pool_name]", category: "Routing" },
+    { id: 55, name: "Configurar PAT (NAT Overload)", objective: "Usar una sola IP pública para varias IPs privadas", difficulty: "Medio", notes: "access-list 1 permit [red] [wildcard]\nip nat inside source list 1 interface [interfaz] overload", category: "Routing" },
+    { id: 56, name: "Configurar ACL estándar", objective: "Filtrar tráfico por IP de origen", difficulty: "Medio", notes: "access-list [1-99] permit|deny [origen] [wildcard]\ninterface [tipo/numero]\nip access-group [1-99] in|out", category: "Routing" },
+    { id: 57, name: "Configurar ACL extendida", objective: "Filtrar por IP, protocolo y puerto", difficulty: "Medio", notes: "access-list [100-199] permit|deny [proto] [origen] [destino] [eq port]", category: "Routing" },
+    { id: 58, name: "Aplicar una ACL a una interfaz", objective: "Aplicar la política de filtro", difficulty: "Medio", notes: "interface [tipo/numero]\nip access-group [número] in|out", category: "Routing" },
+    { id: 59, name: "Configurar VRF (Virtual Routing and Forwarding)", objective: "Virtualizar routers", difficulty: "Medio", notes: "ip vrf [nombre]\nrd [ASN]:[VRF_ID]\ninterface [tipo/numero]\nip vrf forwarding [nombre]", category: "Routing" },
+    { id: 60, name: "Configurar enrutamiento BGP básico", objective: "Conectar sistemas autónomos", difficulty: "Medio", notes: "router bgp [ASN]\nneighbor [ip] remote-as [ASN_REMOTO]", category: "Routing" },
+    { id: 61, name: "Configurar PPPoE", objective: "Conectar a un proveedor de Internet", difficulty: "Intermedio", notes: "username [user] password [pass]\ninterface [tipo/numero]\npppoe-client dial-pool-number 1\ninterface dialer 1\nencapsulation ppp\nppp chap hostname [user]\nppp chap password [pass]", category: "WAN" },
+    { id: 62, name: "Configurar túnel GRE", objective: "Crear un túnel punto a punto", difficulty: "Intermedio", notes: "interface tunnel 1\nip address [ip] [mask]\ntunnel source [ip_fisica]\ntunnel destination [ip_destino]\ntunnel mode gre ip", category: "WAN" },
+    { id: 63, name: "Configurar OSPF en un túnel GRE", objective: "Enrutar sobre el túnel", difficulty: "Intermedio", notes: "router ospf 1\nnetwork [red_tunnel] [wildcard] area 0", category: "WAN" },
+    { id: 64, name: "Configurar Frame Relay", objective: "Conectar a un servicio WAN tradicional", difficulty: "Intermedio", notes: "interface serial [tipo/numero]\nencapsulation frame-relay\nframe-relay map ip [ip_destino] [dlci]", category: "WAN" },
+    { id: 65, name: "Configurar VPN de sitio a sitio", objective: "Conectar dos redes de forma segura", difficulty: "Intermedio", notes: "crypto isakmp policy 1\nauthentication pre-share\nencryption aes\n... (crypto map, transform-set, access-list) ...", category: "WAN" },
+    { id: 66, name: "Configurar VPN de acceso remoto", objective: "Permitir que un usuario acceda de forma segura", difficulty: "Intermedio", notes: "Requiere software cliente (ej. Cisco AnyConnect) e infraestructura (ej. Cisco ASA, VPN Head-end).", category: "WAN" },
+    { id: 67, name: "Configurar rutas basadas en políticas (PBR)", objective: "Enrutar tráfico según políticas", difficulty: "Intermedio", notes: "access-list 101 permit ip [origen] [destino]\nroute-map PBR_MAP permit 10\nmatch ip address 101\nset ip next-hop [ip_siguiente_salto]\ninterface [inbound]\nip policy route-map PBR_MAP", category: "WAN" },
+    { id: 68, name: "Configurar una conexión serial", objective: "Usar un cable serial para conectar dos routers", difficulty: "Intermedio", notes: "interface serial [tipo/numero]\nno shutdown\nclock rate [velocidad] (solo en el lado DCE)", category: "WAN" },
+    { id: 69, name: "Verificar conexión serial", objective: "Asegurar que la conexión funciona", difficulty: "Intermedio", notes: "show controllers [serial] (para ver DCE/DTE)", category: "WAN" },
+    { id: 70, name: "Configurar enlaces E1/T1", objective: "Usar enlaces de telecomunicaciones", difficulty: "Intermedio", notes: "controller t1 [slot/port]\nchannel-group 0 timeslots 1-24 speed 1920\ninterface serial [slot/port]:0", category: "WAN" },
+    { id: 71, name: "Configurar HSRP (Hot Standby Router Protocol)", objective: "Redundancia de puerta de enlace", difficulty: "Intermedio", notes: "interface [vlan]\nstandby [grupo] ip [ip_virtual]\nstandby [grupo] priority 150 (opcional)\nstandby [grupo] preempt", category: "WAN" },
+    { id: 72, name: "Configurar VRRP (Virtual Router Redundancy Protocol)", objective: "Redundancia de puerta de enlace", difficulty: "Intermedio", notes: "interface [vlan]\nvrrp [grupo] ip [ip_virtual]\nvrrp [grupo] priority 150\nvrrp [grupo] preempt", category: "WAN" },
+    { id: 73, name: "Configurar GLBP (Gateway Load Balancing Protocol)", objective: "Redundancia y balanceo de carga", difficulty: "Intermedio", notes: "interface [vlan]\nglbp [grupo] ip [ip_virtual]", category: "WAN" },
+    { id: 74, name: "Configurar PPP con autenticación PAP", objective: "Autenticar en una conexión de marcado", difficulty: "Intermedio", notes: "interface [serial]\nencapsulation ppp\nppp authentication pap\nppp pap sent-username [user] password [pass]", category: "WAN" },
+    { id: 75, name: "Configurar PPP con autenticación CHAP", objective: "Autenticar de forma más segura", difficulty: "Intermedio", notes: "interface [serial]\nencapsulation ppp\nppp authentication chap", category: "WAN" },
+    { id: 76, name: "Configurar WAN de múltiples enlaces", objective: "Usar múltiples proveedores", difficulty: "Intermedio", notes: "Usar rutas estáticas flotantes o PBR para priorizar rutas.", category: "WAN" },
+    { id: 77, name: "Configurar rutas condicionales", objective: "Solo anunciar rutas si una condición se cumple", difficulty: "Intermedio", notes: "track 1 interface [tipo/numero] line-protocol\nip route [red] [mascara] [siguiente_salto] track 1", category: "WAN" },
+    { id: 78, name: "Configurar DTE/DCE en enlaces seriales", objective: "Configurar el 'lado del reloj'", difficulty: "Intermedio", notes: "interface serial [tipo/numero]\nclock rate [velocidad] (solo en el lado DCE)", category: "WAN" },
+    { id: 79, name: "Configurar enrutamiento BGP", objective: "Usar protocolo de Internet exterior", difficulty: "Intermedio", notes: "router bgp [ASN]\nneighbor [ip] remote-as [ASN_REMOTO]", category: "WAN" },
+    { id: 80, name: "Configurar enrutamiento BGP con ruta predeterminada", objective: "Obtener una ruta por defecto del ISP", difficulty: "Intermedio", notes: "router bgp [ASN]\nneighbor [ip] default-originate", category: "WAN" },
+    { id: 81, name: "Configurar IPv6 global unicast en una interfaz", objective: "Habilitar conectividad IPv6", difficulty: "Medio", notes: "interface [tipo/numero]\nipv6 address [dir]/[prefijo]\nno shutdown", category: "IPv6" },
+    { id: 82, name: "Configurar dirección link-local manualmente", objective: "Personalizar FE80::", difficulty: "Medio", notes: "ipv6 address [FE80::...]/64 link-local", category: "IPv6" },
+    { id: 83, name: "Verificar tabla de vecinos IPv6", objective: "Usar show ipv6 neighbors", difficulty: "Medio", notes: "show ipv6 neighbors", category: "IPv6" },
+    { id: 84, name: "Configurar SLAAC en un router", objective: "Autoconfiguración en clientes", difficulty: "Medio", notes: "ipv6 unicast-routing\ninterface [tipo/numero]\nipv6 address [dir]/[prefijo]", category: "IPv6" },
+    { id: 85, name: "Configurar DHCPv6 stateless", objective: "Entregar solo info de DNS", difficulty: "Medio", notes: "ipv6 dhcp pool [nombre]\ndns-server [ipv6_dns]\ninterface [tipo/numero]\nipv6 dhcp server [nombre]", category: "IPv6" },
+    { id: 86, name: "Configurar DHCPv6 stateful", objective: "Entregar direcciones IPv6", difficulty: "Medio", notes: "ipv6 dhcp pool [nombre]\naddress prefix [prefijo]\ninterface [tipo/numero]\nipv6 dhcp server [nombre]\nipv6 nd managed-config-flag", category: "IPv6" },
+    { id: 87, name: "Configurar relay para DHCPv6", objective: "Reenviar solicitudes", difficulty: "Medio", notes: "interface [inside]\nipv6 dhcp relay destination [dhcp_server_ipv6]", category: "IPv6" },
+    { id: 88, name: "Configurar ruta estática IPv6 en 2 routers", objective: "Lograr conectividad", difficulty: "Medio", notes: "ipv6 route [red] [prefijo] [siguiente_salto]", category: "IPv6" },
+    { id: 89, name: "Configurar ruta predeterminada IPv6", objective: "Enrutar tráfico desconocido", difficulty: "Medio", notes: "ipv6 route ::/0 [siguiente_salto]", category: "IPv6" },
+    { id: 90, name: "Configurar OSPFv3 básico en IPv6", objective: "Conectar 2 routers", difficulty: "Medio", notes: "ipv6 unicast-routing\nipv6 router ospf [ID]\nrouter-id [rid]\ninterface [tipo/numero]\nipv6 ospf [ID] area 0", category: "IPv6" },
+    { id: 91, name: "Configurar OSPFv3 multiárea en IPv6", objective: "Separar áreas", difficulty: "Medio", notes: "ipv6 router ospf [ID]\ninterface [area 1]\nipv6 ospf [ID] area 1", category: "IPv6" },
+    { id: 92, name: "Verificar vecinos OSPFv3", objective: "Usar show ipv6 ospf neighbor", difficulty: "Medio", notes: "show ipv6 ospf neighbor", category: "IPv6" },
+    { id: 93, name: "Configurar EIGRP para IPv6 básico", objective: "Conectar 2 routers", difficulty: "Medio", notes: "ipv6 router eigrp [ID]\nrouter-id [rid]\nno shutdown\ninterface [tipo/numero]\nipv6 eigrp [ID]", category: "IPv6" },
+    { id: 94, name: "Verificar vecinos EIGRP IPv6", objective: "Usar show ipv6 eigrp neighbors", difficulty: "Medio", notes: "show ipv6 eigrp neighbors", category: "IPv6" },
+    { id: 95, name: "Configurar dual-stack (IPv4 + IPv6) en una red", objective: "Coexistencia", difficulty: "Medio", notes: "Simplemente configura las IPs v4 y v6 en las mismas interfaces.", category: "IPv6" },
+    { id: 96, name: "Configurar NAT64 entre IPv6 ↔ IPv4", objective: "Interconexión de mundos", difficulty: "Medio", notes: "ipv6 nat prefix [64:ff9b::/96]\nipv6 nat pool [pool] [ip_v4_inicio] [ip_v4_fin] prefix-length 32", category: "IPv6" },
+    { id: 97, name: "Probar conectividad IPv6 con ping", objective: "Usar ping ipv6", difficulty: "Medio", notes: "ping [ipv6]", category: "IPv6" },
+    { id: 98, name: "Configurar ACL IPv6 básica", objective: "Filtrar tráfico en IPv6", difficulty: "Medio", notes: "ipv6 access-list [nombre]\npermit [ipv6_red]/[prefijo] any", category: "IPv6" },
+    { id: 99, name: "Configurar ACL IPv6 extendida", objective: "Filtrar por protocolo y puerto", difficulty: "Medio", notes: "ipv6 access-list [nombre]\ndeny tcp host [ipv6_origen] host [ipv6_destino] eq 80", category: "IPv6" },
+    { id: 100, name: "Aplicar ACL IPv6 en interfaz", objective: "Proteger tráfico entrante/saliente", difficulty: "Medio", notes: "interface [tipo/numero]\nipv6 traffic-filter [nombre] in|out", category: "IPv6" },
+    { id: 101, name: "Configurar AAA", objective: "Control de acceso centralizado", difficulty: "Avanzado", notes: "aaa new-model\naaa authentication login default group [server_group] local", category: "Seguridad" },
+    { id: 102, name: "Configurar SNMP", objective: "Monitoreo de red", difficulty: "Avanzado", notes: "snmp-server community [cadena_ro] RO\nsnmp-server community [cadena_rw] RW", category: "Seguridad" },
+    { id: 103, name: "Configurar NTP", objective: "Sincronizar el reloj de los dispositivos", difficulty: "Avanzado", notes: "ntp server [ip_servidor]\nntp authenticate\nntp trusted-key [key_id]", category: "Seguridad" },
+    { id: 104, name: "Implementar SSHv2", objective: "Acceso remoto seguro", difficulty: "Avanzado", notes: "ip ssh version 2", category: "Seguridad" },
+    { id: 105, name: "Configurar syslog", objective: "Enviar logs a un servidor", difficulty: "Avanzado", notes: "logging [ip_servidor]\nlogging trap [level]", category: "Seguridad" },
+    { id: 106, name: "Configurar seguridad de contraseña", objective: "Forzar contraseñas complejas", difficulty: "Avanzado", notes: "security passwords min-length [largo]", category: "Seguridad" },
+    { id: 107, name: "Configurar VTP", objective: "Administrar VLANs centralmente", difficulty: "Avanzado", notes: "vtp mode server|client|transparent\nvtp domain [nombre]\nvtp password [pass]", category: "Seguridad" },
+    { id: 108, name: "Deshabilitar DTP", objective: "Controlar explícitamente los trunks", difficulty: "Avanzado", notes: "interface [tipo/numero]\nswitchport nonegotiate", category: "Seguridad" },
+    { id: 109, name: "Habilitar autenticación 802.1X", objective: "Autenticar dispositivos en la red", difficulty: "Avanzado", notes: "dot1x system-auth-control\ninterface [tipo/numero]\ndot1x port-control auto", category: "Seguridad" },
+    { id: 110, name: "Configurar port-security con MACs dinámicas", objective: "Usar sticky MAC", difficulty: "Avanzado", notes: "switchport port-security\nswitchport port-security mac-address sticky", category: "Seguridad" },
+    { id: 111, name: "Configurar ACLs con filtros de puerto", objective: "Filtrar por números de puerto", difficulty: "Avanzado", notes: "access-list 101 deny tcp any host [ip] eq 80", category: "Seguridad" },
+    { id: 112, name: "Configurar DHCP snooping para prevenir ataques", objective: "Evitar servidores DHCP no autorizados", difficulty: "Avanzado", notes: "ip dhcp snooping trust (en puertos legítimos)", category: "Seguridad" },
+    { id: 113, name: "Configurar Dynamic ARP Inspection (DAI)", objective: "Prevenir ARP spoofing", difficulty: "Avanzado", notes: "ip arp inspection vlan [número]", category: "Seguridad" },
+    { id: 114, name: "Configurar Storm-Control ", objective: "Limitar tráfico de broadcast/multicast", difficulty: "Avanzado", notes: "storm-control broadcast level [porcentaje]", category: "Seguridad" },
+    { id: 115, name: "Configurar BPDU Guard ", objective: "Evitar que dispositivos externos manipulen STP", difficulty: "Avanzado", notes: "spanning-tree portfast bpduguard", category: "Seguridad" },
+    { id: 116, name: "Configurar Root Guard", objective: "Asegurar que el root bridge no cambie", difficulty: "Avanzado", notes: "interface [tipo/numero]\nspanning-tree guard root", category: "Seguridad" },
+    { id: 117, name: "Configurar Private VLANs", objective: "Aislar hosts dentro de la misma VLAN", difficulty: "Avanzado", notes: "vlan [primary], private-vlan primary\nvlan [isolated], private-vlan isolated\nvlan [community], private-vlan community", category: "Seguridad" },
+    { id: 118, name: "Configurar DAI con DHCP snooping", objective: "Integrar ambas medidas de seguridad", difficulty: "Avanzado", notes: "ip arp inspection trust (en troncales y puertos de DHCP)", category: "Seguridad" },
+    { id: 119, name: "Configurar VACLs (VLAN Access-Lists)", objective: "Filtrar tráfico en el nivel de VLAN", difficulty: "Avanzado", notes: "vlan access-map [nombre] 10\nmatch ip address 101\naction drop\nvlan filter [nombre] vlan-list 10", category: "Seguridad" },
+    { id: 120, name: "Configurar seguridad en el plano de control (CoPP)", objective: "Proteger el CPU del router", difficulty: "Avanzado", notes: "control-plane\nservice-policy input [nombre]", category: "Seguridad" },
+    { id: 121, name: "Configurar ACL basada en nombre", objective: "Usar nombres para ACLs", difficulty: "Avanzado", notes: "ip access-list extended WEB_BLOCK\ndeny tcp any any eq www", category: "Seguridad" },
+    { id: 122, name: "Configurar NAT64 y DNS64", objective: "Interconexión de redes IPv6 e IPv4", difficulty: "Avanzado", notes: "ipv6 nat prefix 64:ff9b::/96\nip nat source static [ip_v4] [ip_v6]\n(Necesita un servidor DNS64 para el lado IPv6)", category: "IPv6" },
+    { id: 123, name: "Configurar túneles 6to4", objective: "Comunicar redes IPv6 sobre redes IPv4", difficulty: "Avanzado", notes: "interface tunnel 1\ntunnel mode ipv6ip 6to4\nipv6 address [2002:v4::1]/64", category: "IPv6" },
+    { id: 124, name: "Configurar túneles 6in4", objective: "Encapsular IPv6 sobre IPv4", difficulty: "Avanzado", notes: "interface tunnel 1\ntunnel mode ipv6ip\ntunnel source [ipv4_origen]\ntunnel destination [ipv4_destino]", category: "IPv6" },
+    { id: 125, name: "Configurar OSPFv3 en IPv6 ", objective: "Protocolo de enrutamiento IPv6", difficulty: "Avanzado", notes: "ipv6 router ospf [ID]\nrouter-id [rid]", category: "IPv6" },
+    { id: 126, name: "Configurar EIGRPv6", objective: "Protocolo de enrutamiento Cisco para IPv6", difficulty: "Avanzado", notes: "ipv6 router eigrp [ID]\nrouter-id [rid]", category: "IPv6" },
+    { id: 127, name: "Configurar HSRP para IPv6", objective: "Redundancia en IPv6", difficulty: "Avanzado", notes: "interface [vlan]\nstandby [grupo] ipv6 [ipv6_virtual]", category: "IPv6" },
+    { id: 128, name: "Configurar VRRP para IPv6", objective: "Redundancia en IPv6", difficulty: "Avanzado", notes: "interface [vlan]\nvrrp [ID] ipv6 [ipv6_virtual]", category: "IPv6" },
+    { id: 129, name: "Configurar Telnet y SSH en router", objective: "Acceso r", difficulty: "Avanzado", notes: "line vty 0 4\ntransport input telnet\ntransport input ssh", category: "Seguridad" },
+];
+
+const TOTAL_EXERCISES = exercisesData.length;
+const exerciseGrid = document.getElementById('exercise-grid');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+const searchInput = document.getElementById('search-input');
+const filterDifficulty = document.getElementById('filter-difficulty');
+const filterCategory = document.getElementById('filter-category');
+const noResults = document.getElementById('no-results');
+
+// Elementos de la modal
+const solutionModal = document.getElementById('solution-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const modalTitle = document.getElementById('modal-title');
+const modalObjective = document.getElementById('modal-objective');
+const modalSolutionContainer = document.getElementById('modal-solution-container');
+
+// --- Funciones de Utilidad ---
+
+/**
+ * Obtiene el progreso guardado en el navegador (localStorage).
+ * @returns {object} Un objeto con los IDs de ejercicios completados.
+ */
+function getProgress() {
+    try {
+        const progress = JSON.parse(localStorage.getItem('ccna_progress')) || {};
+        return progress;
+    } catch (e) {
+        console.error("Error al leer localStorage:", e);
+        return {};
+    }
+}
+
+/**
+ * Guarda el estado de completado de un ejercicio.
+ * @param {number} id - ID del ejercicio.
+ * @param {boolean} isCompleted - Si está completado o no.
+ */
+function saveProgress(id, isCompleted) {
+    const progress = getProgress();
+    if (isCompleted) {
+        progress[id] = true;
+    } else {
+        delete progress[id];
+    }
+    localStorage.setItem('ccna_progress', JSON.stringify(progress));
+    updateProgressDisplay();
+    renderExercises(); // Volver a renderizar para actualizar el estilo
+}
+
+/**
+ * Actualiza la barra de progreso y el texto.
+ */
+function updateProgressDisplay() {
+    const progress = getProgress();
+    const completedCount = Object.keys(progress).length;
+    const percentage = TOTAL_EXERCISES > 0 ? Math.round((completedCount / TOTAL_EXERCISES) * 100) : 0;
+
+    progressText.textContent = `${completedCount} / ${TOTAL_EXERCISES} (${percentage}%)`;
+    progressBar.style.width = `${percentage}%`;
+}
+
+// --- Funciones de Modal ---
+
+/**
+ * Abre la ventana modal y carga el contenido del ejercicio.
+ * @param {object} exercise - El objeto de datos del ejercicio.
+ */
+function openModal(exercise) {
+    modalTitle.textContent = `#${exercise.id}. ${exercise.name}`;
+    modalObjective.textContent = exercise.objective;
+    
+    // Usamos textContent para insertar el texto y el CSS 'white-space: pre-wrap'
+    // se encarga de respetar los saltos de línea (\n)
+    modalSolutionContainer.textContent = exercise.notes;
+
+    solutionModal.classList.remove('hidden');
+}
+
+/**
+ * Cierra la ventana modal.
+ */
+function closeModal() {
+    solutionModal.classList.add('hidden');
+}
+
+// --- Renderizado y Filtros ---
+
+/**
+ * Crea la tarjeta HTML interactiva para un ejercicio.
+ * @param {object} exercise - El objeto de datos del ejercicio.
+ * @returns {HTMLElement} El elemento botón de la tarjeta.
+ */
+function createExerciseCard(exercise) {
+    const isCompleted = getProgress()[exercise.id];
+    
+    // Usamos <button> para que sea accesible y clickable para abrir la modal
+    const card = document.createElement('button');
+    card.className = `card p-5 rounded-lg text-left shadow-lg flex flex-col justify-between ${isCompleted ? 'completed' : ''}`;
+    
+    // 1. Evento para abrir la modal al hacer clic en la tarjeta
+    card.addEventListener('click', () => {
+        openModal(exercise);
+    });
+
+    // Función para limpiar el nombre de la dificultad para el CSS (ej. "Básico" -> "basico")
+    const cleanDifficulty = exercise.difficulty.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Contenido HTML de la tarjeta
+    card.innerHTML = `
+        <div>
+            <div class="flex justify-between items-start mb-3">
+                <span class="text-lg font-bold text-teal-400 hover:text-teal-300 transition-colors">
+                    #${exercise.id}. ${exercise.name}
+                </span>
+                <span class="tag tag-${cleanDifficulty}">
+                    ${exercise.difficulty}
+                </span>
+            </div>
+            <p class="text-sm text-slate-400 mb-4">${exercise.objective}</p>
+        </div>
+        
+        <div class="mt-auto flex justify-between items-end pt-3 border-t border-[#233554]">
+            <span class="text-xs text-slate-500 italic">${exercise.category}</span>
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" data-id="${exercise.id}" class="custom-checkbox" ${isCompleted ? 'checked' : ''}>
+                <span class="text-sm text-slate-300">Completado</span>
+            </label>
+        </div>
+    `;
+
+    // 2. Evento para marcar/desmarcar la casilla de completado
+    const checkbox = card.querySelector('.custom-checkbox');
+    checkbox.addEventListener('change', (e) => {
+        // Detener la propagación para que el clic del checkbox NO ABRA LA MODAL
+        e.stopPropagation();
+        saveProgress(exercise.id, e.target.checked);
+    });
+
+    return card;
+}
+
+/**
+ * Filtra los ejercicios y los renderiza en la cuadrícula.
+ */
+function renderExercises() {
+    exerciseGrid.innerHTML = '';
+    const searchTerm = searchInput.value.toLowerCase();
+    const difficultyFilter = filterDifficulty.value;
+    const categoryFilter = filterCategory.value;
+
+    const filteredExercises = exercisesData.filter(exercise => {
+        const matchesSearch = exercise.name.toLowerCase().includes(searchTerm);
+        const matchesDifficulty = difficultyFilter === 'all' || exercise.difficulty === difficultyFilter;
+        const matchesCategory = categoryFilter === 'all' || exercise.category === categoryFilter;
+
+        return matchesSearch && matchesDifficulty && matchesCategory;
+    });
+
+    if (filteredExercises.length === 0) {
+        noResults.classList.remove('hidden');
+    } else {
+        noResults.classList.add('hidden');
+        filteredExercises.forEach(exercise => {
+            exerciseGrid.appendChild(createExerciseCard(exercise));
+        });
+    }
+}
+
+/**
+ * Llena dinámicamente el select de categorías.
+ */
+function populateCategoryFilter() {
+    const categories = [...new Set(exercisesData.map(e => e.category))].sort();
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        filterCategory.appendChild(option);
+    });
+}
+
+// --- Inicialización y Event Listeners ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    populateCategoryFilter();
+    updateProgressDisplay();
+    renderExercises();
+
+    // Event Listeners para los filtros y búsqueda
+    searchInput.addEventListener('input', renderExercises);
+    filterDifficulty.addEventListener('change', renderExercises);
+    filterCategory.addEventListener('change', renderExercises);
+
+    // Event Listeners para la Modal
+    closeModalBtn.addEventListener('click', closeModal);
+    solutionModal.addEventListener('click', (e) => {
+        // Cerrar la modal si se hace clic en el fondo oscuro
+        if (e.target.id === 'solution-modal') {
+            closeModal();
+        }
+    });
+});
+
+
+
+
+
+    </script>
+       
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
